@@ -13,6 +13,8 @@ contract FlowStream {
     }
 
     mapping(uint256 => Stream) public streams;
+    mapping(address => uint256[]) public senderStreams;
+    mapping(address => uint256[]) public recipientStreams;
     uint256 public nextStreamId;
 
     event StreamCreated(uint256 indexed streamId, address indexed sender, address indexed recipient, uint256 flowRate);
@@ -34,8 +36,19 @@ contract FlowStream {
             isActive: true
         });
 
+        senderStreams[msg.sender].push(nextStreamId);
+        recipientStreams[recipient].push(nextStreamId);
+
         emit StreamCreated(nextStreamId, msg.sender, recipient, flowRate);
         nextStreamId++;
+    }
+
+    function getSenderStreams(address user) external view returns (uint256[] memory) {
+        return senderStreams[user];
+    }
+
+    function getRecipientStreams(address user) external view returns (uint256[] memory) {
+        return recipientStreams[user];
     }
 
     function withdraw(uint256 streamId) external {

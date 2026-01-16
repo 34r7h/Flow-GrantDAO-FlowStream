@@ -1,151 +1,232 @@
 "use client";
 
-import React, { useState } from "react";
-import Head from "next/head";
+import React, { useState, useEffect } from "react";
+import { useAccount, useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { parseEther, formatEther } from "viem";
+
+// Contract Address & ABI
+const CONTRACT_ADDRESS = "0x26c2533a4023ffbe9a021a0612f24bbc718b130e";
+const ABI = [
+  {
+    "type": "function",
+    "name": "createStream",
+    "inputs": [
+      { "name": "recipient", "type": "address", "internalType": "address" },
+      { "name": "flowRate", "type": "uint256", "internalType": "uint256" }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "cancelStream",
+    "inputs": [{ "name": "streamId", "type": "uint256", "internalType": "uint256" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "withdraw",
+    "inputs": [{ "name": "streamId", "type": "uint256", "internalType": "uint256" }],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getSenderStreams",
+    "inputs": [{ "name": "user", "type": "address", "internalType": "address" }],
+    "outputs": [{ "name": "", "type": "uint256[]", "internalType": "uint256[]" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "streams",
+    "inputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+    "outputs": [
+      { "name": "sender", "type": "address", "internalType": "address" },
+      { "name": "recipient", "type": "address", "internalType": "address" },
+      { "name": "flowRate", "type": "uint256", "internalType": "uint256" },
+      { "name": "startTime", "type": "uint256", "internalType": "uint256" },
+      { "name": "lastWithdrawTime", "type": "uint256", "internalType": "uint256" },
+      { "name": "deposit", "type": "uint256", "internalType": "uint256" },
+      { "name": "isActive", "type": "bool", "internalType": "bool" }
+    ],
+    "stateMutability": "view"
+  }
+] as const;
 
 export default function Home() {
+  const { address, isConnected } = useAccount();
   const [showDemo, setShowDemo] = useState(false);
+
+  // Wagmi hooks
+  const { writeContract, isPending } = useWriteContract();
+
+  // Fetch user streams (IDs)
+  const { data: streamIds, refetch: refetchStreamIds } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: ABI,
+    functionName: "getSenderStreams",
+    args: address ? [address] : undefined,
+    query: { enabled: !!address }
+  });
+
+  // Watch for events to refresh
+  useWatchContractEvent({
+    address: CONTRACT_ADDRESS,
+    abi: ABI,
+    eventName: 'StreamCreated',
+    onLogs() {
+      refetchStreamIds();
+    },
+  });
 
   return (
     <div className="min-h-screen bg-gray-900 text-white font-sans">
-      <Head>
-        <title>FlowStream | Flow EVM Grant Streaming</title>
-        <meta name="description" content="Continuous Grant Streaming on Flow EVM" />
-      </Head>
-
       {/* Navbar */}
       <nav className="flex justify-between items-center p-6 max-w-7xl mx-auto">
         <div className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-400 to-blue-500">
           FlowStream
         </div>
-        <div className="space-x-6 hidden md:flex">
-          <a href="#features" className="hover:text-green-400 transition">Features</a>
-          <a href="#how-it-works" className="hover:text-green-400 transition">How it Works</a>
+        <div className="space-x-4 flex items-center">
+          {/* Show Connect Button via RainbowKit */}
+          <ConnectButton />
         </div>
-        <button
-          onClick={() => setShowDemo(!showDemo)}
-          className="bg-green-500 hover:bg-green-600 px-6 py-2 rounded-full font-medium transition"
-        >
-          {showDemo ? "Back to Home" : "Launch App"}
-        </button>
       </nav>
 
-      {showDemo ? (
-        <DemoApp />
+      {!isConnected && !showDemo ? (
+        // Hero Section (Logged Out)
+        <header className="flex flex-col items-center justify-center text-center py-24 px-4">
+          <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight">
+            Grant Streaming on <span className="text-green-400">Flow EVM</span>
+          </h1>
+          <p className="text-xl text-gray-400 max-w-2xl mb-10">
+            Empower your DAO with real-time, capital-efficient, and accountable grant distribution.
+            Built for high-performance communities.
+          </p>
+          <div className="flex space-x-4">
+            {/* This button essentially prompts them to use the ConnectButton above */}
+            <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+              <p className="font-medium text-gray-300">Connect your wallet to start streaming</p>
+            </div>
+          </div>
+        </header>
       ) : (
-        <>
-          {/* Hero Section */}
-          <header className="flex flex-col items-center justify-center text-center py-24 px-4">
-            <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight">
-              Grant Streaming on <span className="text-green-400">Flow EVM</span>
-            </h1>
-            <p className="text-xl text-gray-400 max-w-2xl mb-10">
-              Empower your DAO with real-time, capital-efficient, and accountable grant distribution.
-              Built for high-performance communities.
-            </p>
-            <div className="flex space-x-4">
-              <button onClick={() => setShowDemo(true)} className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 px-8 py-3 rounded-full text-lg font-bold transition transform hover:scale-105">
-                Start Streaming
-              </button>
-              <a href="https://dorahacks.io/flow/detail" target="_blank" className="border border-gray-600 hover:border-gray-400 px-8 py-3 rounded-full text-lg font-medium transition">
-                Hackathon Details
-              </a>
-            </div>
+        // Dashboard (Logged In)
+        <div className="max-w-5xl mx-auto p-6 py-12">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-3xl font-bold">Your Active Streams</h2>
+            <CreateStreamForm writeContract={writeContract} isPending={isPending} />
+          </div>
 
-            <div className="mt-20">
-              <div className="relative w-full max-w-4xl mx-auto h-64 bg-gray-800 rounded-lg overflow-hidden border border-gray-700 shadow-2xl">
-                <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-                  Top 500 Projects Dashboard Preview
-                </div>
-              </div>
-            </div>
-          </header>
-
-          {/* Features */}
-          <section id="features" className="py-20 bg-gray-800">
-            <div className="max-w-7xl mx-auto px-6">
-              <h2 className="text-3xl font-bold mb-12 text-center">Why FlowStream?</h2>
-              <div className="grid md:grid-cols-3 gap-8">
-                <FeatureCard
-                  title="Real-Time Funding"
-                  desc="Funds are streamed second-by-second. Grantees can withdraw vested amounts anytime."
-                />
-                <FeatureCard
-                  title="Accountability"
-                  desc="Grants can be cancelled by the DAO at any time if milestones aren't met, returning unspent funds."
-                />
-                <FeatureCard
-                  title="Flow EVM Speed"
-                  desc="Leverage the blazing speed and low gas costs of Flow Blockchain with full EVM compatibility."
-                />
-              </div>
-            </div>
-          </section>
-        </>
+          <div className="grid gap-4">
+            {streamIds && streamIds.length > 0 ? (
+              streamIds.map((id) => (
+                <StreamCard key={id.toString()} id={id} />
+              ))
+            ) : (
+              <p className="text-gray-500">No active streams found.</p>
+            )}
+          </div>
+        </div>
       )}
 
       <footer className="py-8 text-center text-gray-500 text-sm">
         <p>© 2026 FlowStream. Built for Flow GrantDAO Round 2.</p>
         <p className="mt-2 text-xs">
-          Flow EVM Contract: <a href="https://evm-testnet.flowscan.io/address/0x26c2533a4023ffbe9a021a0612f24bbc718b130e" target="_blank" className="text-green-500 hover:underline">0x26c2533a4023ffbe9a021a0612f24bbc718b130e</a>
+          Flow EVM Contract: <a href={`https://evm-testnet.flowscan.io/address/${CONTRACT_ADDRESS}`} target="_blank" className="text-green-500 hover:underline">{CONTRACT_ADDRESS}</a>
         </p>
       </footer>
     </div>
   );
 }
 
-function FeatureCard({ title, desc }: { title: string, desc: string }) {
+function CreateStreamForm({ writeContract, isPending }: { writeContract: any, isPending: boolean }) {
+  const [recipient, setRecipient] = useState("");
+  const [flowRate, setFlowRate] = useState("");
+  const [deposit, setDeposit] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      // flowRate is in wei/sec
+      // deposit is total locked
+      writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: ABI,
+        functionName: 'createStream',
+        args: [recipient, BigInt(flowRate)],
+        value: parseEther(deposit)
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
-    <div className="p-8 bg-gray-900 rounded-2xl border border-gray-700 hover:border-green-500 transition">
-      <h3 className="text-xl font-bold mb-4 text-white">{title}</h3>
-      <p className="text-gray-400">{desc}</p>
-    </div>
+    <form onSubmit={handleSubmit} className="flex gap-2 items-end bg-gray-800 p-4 rounded-xl border border-gray-700">
+      <div>
+        <label className="block text-xs text-gray-400">Recipient</label>
+        <input required placeholder="0x..." value={recipient} onChange={e => setRecipient(e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm w-32" />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400">Rate (Wei/sec)</label>
+        <input required placeholder="100000..." value={flowRate} onChange={e => setFlowRate(e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm w-24" />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400">Deposit (FLOW)</label>
+        <input required placeholder="1.0" value={deposit} onChange={e => setDeposit(e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm w-20" />
+      </div>
+      <button disabled={isPending} type="submit" className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-4 py-1 rounded-lg font-medium text-sm h-8">
+        {isPending ? "Tx Pending..." : "+ Create"}
+      </button>
+    </form>
   )
 }
 
-function DemoApp() {
-  const [streams, setStreams] = useState([
-    { id: 1, recipient: "0x123...abc", flowRate: "0.001 Flow/sec", streamed: "150.45 Flow" },
-    { id: 2, recipient: "0x456...def", flowRate: "0.005 Flow/sec", streamed: "890.12 Flow" },
-  ]);
+function StreamCard({ id }: { id: bigint }) {
+  const { data: stream } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: ABI,
+    functionName: 'streams',
+    args: [id]
+  });
+
+  // Refresh ticker
+  const [now, setNow] = useState(Date.now() / 1000);
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now() / 1000), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!stream) return <div className="animate-pulse bg-gray-800 h-24 rounded-xl"></div>;
+
+  const [sender, recipient, flowRate, startTime, lastWithdrawTime, deposit, isActive] = stream;
+
+  // Calculate streamed amount live
+  // This is purely visual estimate
+  const timeElapsed = BigInt(Math.floor(now)) - lastWithdrawTime;
+  const vested = isActive ? (timeElapsed * flowRate) : 0n;
+  // Don't show vested > deposit
+  const displayVested = vested > deposit ? deposit : vested;
 
   return (
-    <div className="max-w-5xl mx-auto p-6 py-12">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-bold">Your Active Streams</h2>
-        <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium">
-          + Create Stream
-        </button>
+    <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 flex justify-between items-center">
+      <div>
+        <div className="text-sm text-gray-400 mb-1">Stream #{id.toString()} to <span className="font-mono text-white">{recipient.slice(0, 6)}...{recipient.slice(-4)}</span></div>
+        <div className="text-xs text-gray-500">{isActive ? "🟢 Streaming" : "🔴 Ended"}</div>
       </div>
-
-      <div className="grid gap-4">
-        {streams.map((s) => (
-          <div key={s.id} className="bg-gray-800 p-6 rounded-xl border border-gray-700 flex justify-between items-center">
-            <div>
-              <div className="text-sm text-gray-400 mb-1">Recipient</div>
-              <div className="font-mono text-lg">{s.recipient}</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-400 mb-1">Flow Rate</div>
-              <div className="text-green-400 font-medium">{s.flowRate}</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-400 mb-1">Total Streamed</div>
-              <div className="text-2xl font-bold">{s.streamed}</div>
-            </div>
-            <button className="text-red-400 hover:text-red-300 font-medium border border-red-900 hover:bg-red-900/50 px-4 py-2 rounded-lg transition">
-              Cancel
-            </button>
-          </div>
-        ))}
+      <div>
+        <div className="text-sm text-gray-400 mb-1">Flow Rate</div>
+        <div className="text-green-400 font-medium font-mono text-sm">{flowRate.toString()} wei/s</div>
       </div>
-
-      <div className="mt-12 p-6 bg-yellow-900/20 border border-yellow-700/50 rounded-xl">
-        <h3 className="text-yellow-500 font-bold mb-2">⚠ Demo Mode</h3>
-        <p className="text-gray-400 text-sm">
-          This is a simulation. To interact with the live Flow EVM Testnet, please connect your wallet (Coming Soon).
-        </p>
+      <div>
+        <div className="text-sm text-gray-400 mb-1">Remaining Deposit</div>
+        <div className="text-xl font-bold font-mono">{formatEther(deposit)} FLOW</div>
+        <div className="text-xs text-gray-500">Unclaimed Vested: {displayVested.toString()} wei</div>
       </div>
+      {/* Action Buttons would go here (Withdraw/Cancel) */}
     </div>
   )
 }
