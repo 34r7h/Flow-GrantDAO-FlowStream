@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAccount, useReadContract, useWriteContract, useWatchContractEvent } from "wagmi";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount, useReadContract, useWriteContract, useWatchContractEvent, useConnect, useDisconnect } from "wagmi";
 import { parseEther, formatEther } from "viem";
 
 // Contract Address & ABI
-const CONTRACT_ADDRESS = "0x26c2533a4023ffbe9a021a0612f24bbc718b130e";
+const CONTRACT_ADDRESS = "0x92963ca894c77d81285c9fbb0a5e2f2e999b37bc";
 const ABI = [
   {
     "type": "function",
@@ -58,6 +57,9 @@ const ABI = [
 
 export default function Home() {
   const { address, isConnected } = useAccount();
+  const { connectors, connect } = useConnect();
+  const { disconnect } = useDisconnect();
+
   const [showDemo, setShowDemo] = useState(false);
 
   // Wagmi hooks
@@ -90,8 +92,24 @@ export default function Home() {
           FlowStream
         </div>
         <div className="space-x-4 flex items-center">
-          {/* Show Connect Button via RainbowKit */}
-          <ConnectButton />
+          {isConnected ? (
+            <div className="flex gap-4 items-center">
+              <span className="text-sm bg-gray-800 px-3 py-1 rounded-full">{address?.slice(0, 6)}...{address?.slice(-4)}</span>
+              <button onClick={() => disconnect()} className="text-sm text-red-400 hover:text-red-300">Disconnect</button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              {connectors.filter(c => c.id === 'injected' || c.id === 'metaMask').map((connector) => (
+                <button
+                  key={connector.uid}
+                  onClick={() => connect({ connector })}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                >
+                  Connect Wallet
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </nav>
 
@@ -106,10 +124,7 @@ export default function Home() {
             Built for high-performance communities.
           </p>
           <div className="flex space-x-4">
-            {/* This button essentially prompts them to use the ConnectButton above */}
-            <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-              <p className="font-medium text-gray-300">Connect your wallet to start streaming</p>
-            </div>
+            <p className="text-gray-500">Connect your wallet to get started.</p>
           </div>
         </header>
       ) : (
@@ -168,15 +183,15 @@ function CreateStreamForm({ writeContract, isPending }: { writeContract: any, is
     <form onSubmit={handleSubmit} className="flex gap-2 items-end bg-gray-800 p-4 rounded-xl border border-gray-700">
       <div>
         <label className="block text-xs text-gray-400">Recipient</label>
-        <input required placeholder="0x..." value={recipient} onChange={e => setRecipient(e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm w-32" />
+        <input required placeholder="0x..." value={recipient} onChange={e => setRecipient(e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm w-32 text-white" />
       </div>
       <div>
         <label className="block text-xs text-gray-400">Rate (Wei/sec)</label>
-        <input required placeholder="100000..." value={flowRate} onChange={e => setFlowRate(e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm w-24" />
+        <input required placeholder="100000..." value={flowRate} onChange={e => setFlowRate(e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm w-24 text-white" />
       </div>
       <div>
         <label className="block text-xs text-gray-400">Deposit (FLOW)</label>
-        <input required placeholder="1.0" value={deposit} onChange={e => setDeposit(e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm w-20" />
+        <input required placeholder="1.0" value={deposit} onChange={e => setDeposit(e.target.value)} className="bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm w-20 text-white" />
       </div>
       <button disabled={isPending} type="submit" className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 px-4 py-1 rounded-lg font-medium text-sm h-8">
         {isPending ? "Tx Pending..." : "+ Create"}

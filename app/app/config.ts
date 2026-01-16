@@ -27,4 +27,5 @@ export const config = createConfig({
     transports: {
         [flowTestnet.id]: http(),
     },
+    ssr: true,
 })
