@@ -19,6 +19,10 @@ FlowStream allows DAOs and grant programs to stream funds to grantees in real-ti
 - **Frontend**: Next.js, RainbowKit, Wagmi, Viem
 - **Indexer**: The Graph (optional/TBD)
 
+## Deployed Contracts (Flow EVM Testnet)
+- **FlowStream.sol**: [`0x26c2533a4023ffbe9a021a0612f24bbc718b130e`](https://evm-testnet.flowscan.io/address/0x26c2533a4023ffbe9a021a0612f24bbc718b130e)
+
+
 ## Roadmap
 - [ ] Smart Contract for Streaming
 - [ ] Frontend Dashboard for Creating Streams

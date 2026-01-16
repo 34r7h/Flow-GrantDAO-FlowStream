@@ -85,7 +85,10 @@ export default function Home() {
       )}
 
       <footer className="py-8 text-center text-gray-500 text-sm">
-        © 2026 FlowStream. Built for Flow GrantDAO Round 2.
+        <p>© 2026 FlowStream. Built for Flow GrantDAO Round 2.</p>
+        <p className="mt-2 text-xs">
+          Flow EVM Contract: <a href="https://evm-testnet.flowscan.io/address/0x26c2533a4023ffbe9a021a0612f24bbc718b130e" target="_blank" className="text-green-500 hover:underline">0x26c2533a4023ffbe9a021a0612f24bbc718b130e</a>
+        </p>
       </footer>
     </div>
   );
